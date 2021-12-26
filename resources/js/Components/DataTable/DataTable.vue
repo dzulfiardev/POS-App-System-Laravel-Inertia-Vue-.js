@@ -34,7 +34,7 @@
                       <img
                         class="h-10 w-10 rounded-full"
                         src=""
-                        alt=""
+                        alt="a"
                       />
                     </div> -->
                     <div>

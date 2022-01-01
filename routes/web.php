@@ -35,6 +35,10 @@ Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/category', [CategoryController::class, 'category'])->name('category');
+    Route::post('/category-create', [CategoryController::class, 'create']);
+
     Route::get('/brand', [BrandController::class, 'brand'])->name('brand');
     Route::get('/inventories', [InventoriesController::class, 'inventories'])->name('inventories');
+
+    Route::get('/testing', [CategoryController::class, 'testing']);
 });

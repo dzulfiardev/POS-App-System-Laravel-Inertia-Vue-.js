@@ -17,7 +17,7 @@
           "
           v-html="link.label"
         />
-        <Link
+        <a
           v-else
           class="
             mr-1
@@ -28,14 +28,15 @@
             leading-4
             border
             rounded
-            hover:bg-white
+            hover:bg-blue-300
             focus:border-indigo-500 focus:text-indigo-500
           "
           :class="{ 'bg-blue-700 text-white': link.active }"
-          :href="link.url"
+          href=""
+          @click.prevent="page(link)"
           v-html="link.label"
-        />
-       
+        >
+        </a>
         <!-- :href="link.url" -->
       </template>
     </div>
@@ -52,6 +53,15 @@ export default {
   },
   props: {
     links: Array,
+    params: Object,
+  },
+  setup(props) {
+    function page(link) {
+      const pageNum = link.url.substring(link.url.lastIndexOf("=") + 1);
+      props.params.page = pageNum;
+    }
+
+    return { page };
   },
 };
 </script> 

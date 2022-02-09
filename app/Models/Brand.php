@@ -5,16 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Category extends Model
+class Brand extends Model
 {
 	use HasFactory;
+
 	protected $guarded = [];
-	protected $table = 'categories';
+	protected $table = 'brands';
 	protected $primaryKey = 'id';
 	protected $fillable = [
 		'id',
-		'category_code',
-		'category_name',
+		'brand_code',
+		'brand_name',
 		'created_at',
 		'updated_at',
 	];

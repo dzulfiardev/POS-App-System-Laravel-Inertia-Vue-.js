@@ -6,6 +6,8 @@
       </h2>
     </template>
 
+    <BrandMain />
+
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg"></div>
@@ -17,11 +19,13 @@
 <script>
 import { defineComponent } from "vue";
 import AppLayout from "@/Layouts/AppLayout.vue";
+import BrandMain from "../../Components/Brand/BrandMain.vue";
 
 export default defineComponent({
   props: ["title", "heading"],
   components: {
     AppLayout,
+    BrandMain,
   },
 });
 </script>

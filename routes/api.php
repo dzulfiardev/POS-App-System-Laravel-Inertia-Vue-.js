@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,5 +16,10 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+	return $request->user();
+});
+
+Route::group(['middleware' => ['auth', 'verified']], function () {
+	Route::post('/category-edit', [CategoryController::class, 'showSingle']);
+	Route::get('/testing', [CategoryController::class, 'showSingle']);
 });

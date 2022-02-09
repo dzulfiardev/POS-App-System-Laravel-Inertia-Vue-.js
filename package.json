@@ -27,10 +27,12 @@
     },
     "dependencies": {
         "@fortawesome/fontawesome-free": "^5.15.4",
+        "@headlessui/vue": "^1.4.2",
         "@heroicons/vue": "^1.0.5",
         "@mdi/font": "^6.5.95",
         "@vue-hero-icons/outline": "^1.7.2",
         "font-awesome": "^4.7.0",
+        "nprogress": "^0.2.0",
         "vuejs-datatable": "^2.0.0-alpha.7"
     }
 }

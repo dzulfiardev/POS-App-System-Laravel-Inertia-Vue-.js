@@ -1,5 +1,6 @@
 <template>
   <div class="container my-5">
+    <SuccessNotification :message="message.success" />
     <div class="md:grid md:grid-cols-3 md:gap-6">
       <!--  -->
       <div class="mt-10 sm:mt-0">
@@ -19,7 +20,7 @@
                         type="text"
                         name="code"
                         id="code"
-                        autocomplete="given-name"
+                        autocomplete="off"
                         class="
                           mt-1
                           focus:ring-indigo-500 focus:border-indigo-500
@@ -32,12 +33,12 @@
                         "
                         placeholder="0"
                         autofocus
-                        v-model="form.category_code"
+                        v-model="form.brand_code"
                       />
                       <small
                         class="text-red-600"
-                        v-if="form.errors.category_code"
-                        >{{ form.errors.category_code }}</small
+                        v-if="validation.brand_code"
+                        >{{ validation.brand_code }}</small
                       >
                       <small class="text-red-600" v-if="validation.number">{{
                         validation.number
@@ -55,7 +56,7 @@
                         type="text"
                         name="name"
                         id="name"
-                        autocomplete="given-name"
+                        autocomplete="off"
                         class="
                           mt-1
                           focus:ring-indigo-500 focus:border-indigo-500
@@ -66,12 +67,12 @@
                           border-gray-300
                           rounded-md
                         "
-                        v-model="form.category_name"
+                        v-model="form.brand_name"
                       />
                       <small
                         class="text-red-600"
-                        v-if="form.errors.category_name"
-                        >{{ form.errors.category_name }}</small
+                        v-if="validation.brand_name"
+                        >{{ validation.brand_name }}</small
                       >
                     </div>
                   </div>
@@ -99,10 +100,10 @@
                       focus:ring-offset-2
                       focus:ring-stone-600
                     "
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                    @click="closeEdit()"
+                    :class="{ 'opacity-25': disable.save }"
+                    :disabled="disable.save"
                     v-if="action.cancelUpdate"
+                    @click="resetForm()"
                   >
                     Cancel
                   </button>
@@ -127,19 +128,19 @@
                       focus:ring-offset-2
                       focus:ring-indigo-500
                     "
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
+                    :class="{ 'opacity-25': disable.save }"
+                    :disabled="disable.save"
                   >
                     Save
                   </button>
 
-                  <progress
+                  <!-- <progress
                     v-if="form.progress"
                     :value="form.progress.percentage"
                     max="100"
                   >
                     {{ form.progress.percentage }}%
-                  </progress>
+                  </progress> -->
                 </div>
               </div>
             </form>
@@ -153,227 +154,219 @@
         <div class="shadow sm:rounded-md sm:overflow-hidden">
           <div class="px-4 py-2 bg-white space-y-6 sm:p-6">
             <DataTable
-              :head="tableHead"
-              :values="data"
-              :showEntries="showEntries"
-              :currentEntries="currentEntries"
+              :tableHead="tableHead"
+              :dataList="data"
+              :links="data.pagination"
               :params="params"
-              :checkbox="checkbox"
-              @sort="sort"
+              :path="path"
+              :loader="loader"
+              :allDataTablePath="path.allDataTable"
+              @dataTable="dataTable"
               @edit="edit"
-              @destroy="destroy"
-              @bulkDestroy="bulkDestroy"
             />
-            <Pagination class="mt-6" :links="data.links" />
           </div>
         </div>
       </div>
     </div>
-    <!-- Delete Modal -->
-    <TransitionRoot as="template" :show="modal.delete">
-      <DeleteModal
-        :deleteModal="deleteModal"
-        @close="closeDeleteModal"
-        @acceptDestroy="acceptDestroy"
-      />
-    </TransitionRoot>
-    <TransitionRoot as="template" :show="modal.bulkDelete">
-      <BulkDeleteModal
-        @close="closeBulkDeleteModal"
-        @bulkDestroy="bulkDestroy"
-        @acceptDestroy="acceptBulkDestroy"
-      />
-    </TransitionRoot>
   </div>
 </template>
 
 <script>
-import { reactive, ref } from "vue";
-import DataTable from "../DataTable/DataTable.vue";
-import { useForm } from "@inertiajs/inertia-vue3";
-import { Inertia } from "@inertiajs/inertia";
+import { reactive, onMounted } from "vue";
 import NProgress from "nprogress";
-import Pagination from "../Pagination/Pagination.vue";
-import axios from "axios";
-import { TransitionRoot } from "@headlessui/vue";
-import DeleteModal from "../Modal/DeleteModal.vue";
-import BulkDeleteModal from "../Modal/DeleteModal.vue";
-import { CheckCircleIcon } from "@heroicons/vue/outline";
+import SuccessNotification from "./SuccessNotification.vue";
+import DataTable from "./DataTable.vue";
 
 export default {
-  props: {
-    errors: Object,
-    data: Object,
-    filters: Object,
-  },
   components: {
+    SuccessNotification,
     DataTable,
-    Pagination,
-    TransitionRoot,
-    DeleteModal,
-    BulkDeleteModal,
-    CheckCircleIcon,
   },
-  setup(props) {
-    const filters = props.filters;
-    const params = reactive({
-      search: filters.search,
-      field: filters.field,
-      direction: filters.direction,
+  setup() {
+    const form = reactive({
+      id: null,
+      brand_code: null,
+      brand_name: null,
     });
 
-    function sort(field) {
-      if (field) {
-        params.field = field;
-        params.direction = params.direction === "asc" ? "desc" : "asc";
-      } else {
-        params.field = "";
-        params.direction = "";
-      }
+    const params = reactive({
+      search: "",
+      page: "",
+      field: "",
+      direction: "",
+    });
+
+    const loader = reactive({
+      table: false,
+    });
+
+    const action = reactive({
+      cancelUpdate: false,
+      id: 0,
+    });
+
+    const tableHead = reactive({
+      checkboxAll: true,
+      th: [
+        {
+          name: "Code",
+          sort: true,
+          sortName: "brand_code",
+        },
+        {
+          name: "Brand Name",
+          sort: true,
+          sortName: "brand_name",
+        },
+        {
+          name: "Action",
+          sort: false,
+          sortName: null,
+        },
+      ],
+    });
+
+    const data = reactive({
+      table: {},
+      pagination: [],
+    });
+
+    const validation = reactive({
+      number: "",
+      brand_code: null,
+      brand_name: null,
+    });
+
+    const message = reactive({
+      success: null,
+    });
+
+    const disable = reactive({
+      save: false,
+    });
+
+    const path = reactive({
+      allDataTable: "brand-all",
+      destroy: "brand",
+      bulkDestroy: "brand-bulk-delete",
+      filter: "filter",
+    });
+
+    function dataTable() {
+      loader.table = true;
+      axios
+        .get("/brand-all")
+        .then((res) => {
+          loader.table = false;
+          data.table = res.data.success.data;
+          data.pagination = res.data.success.links;
+        })
+        .catch((err) => {
+          loader.table = false;
+          console.log(err.response);
+        });
     }
 
-    const form = useForm({
-      id: null,
-      category_code: null,
-      category_name: null,
-      action: null,
-    });
+    function resetForm() {
+      form.id = null;
+      form.brand_code = null;
+      form.brand_name = null;
+      validation.number = "";
+      validation.brand_code = null;
+      validation.brand_name = null;
+      action.cancelUpdate = false;
+    }
 
-    const validation = reactive({ number: "" });
+    function edit(id) {
+      NProgress.start();
+      axios
+        .get("/brand/" + id)
+        .then((res) => {
+          action.cancelUpdate = true;
+          NProgress.done();
+          const data = res.data.success;
+          form.id = data.id;
+          form.brand_code = data.brand_code;
+          form.brand_name = data.brand_name;
+        })
+        .catch((err) => {
+          console.log(err.response);
+        });
+    }
 
     function submit() {
-      if (!/^[0-9]+$/.test(form.category_code)) {
+      NProgress.start();
+      disable.save = true;
+
+      if (!/^[0-9]+$/.test(form.brand_code)) {
+        NProgress.done();
+        disable.save = false;
         validation.number =
           "Please only enter numeric characters only for Category Code";
         return false;
+      } else {
+        validation.number = "";
       }
-      form.post("/category-create", {
-        preserveScroll: true,
-        onSuccess: () => {
-          form.reset();
-          validation.number = "";
-          action.cancelUpdate = false;
-        },
-      });
-    }
 
-    const action = reactive({
-      id: 0,
-      cancelUpdate: false,
-      flashMessage: false,
-      flashMessageText: "",
-    });
-
-    function edit(id) {
-      form.action = "edit";
-      action.cancelUpdate = true;
-      NProgress.start();
       axios
-        .post("/category-edit", {
-          id: id,
-        })
+        .post("/brand", form)
         .then((res) => {
           NProgress.done();
-          form.id = res.data.id;
-          form.category_code = res.data.category_code;
-          form.category_name = res.data.category_name;
+          resetForm();
+          dataTable();
+          disable.save = false;
+          message.success = res.data.success;
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+          setTimeout(() => {
+            message.success = null;
+          }, 3000);
         })
         .catch((err) => {
-          console.log(err);
-        });
-    }
+          const error = err.response.data.error;
+          NProgress.done();
+          disable.save = false;
+          if (error) {
+            if (error.brand_code) {
+              validation.brand_code = error.brand_code[0];
+            } else {
+              validation.brand_code = null;
+            }
 
-    function closeEdit() {
-      action.cancelUpdate = false;
-      form.reset();
-    }
-
-    const modal = reactive({
-      delete: false,
-      bulkDelete: false,
-    });
-
-    function destroy(id) {
-      action.id = id;
-      modal.delete = !modal.delete;
-    }
-
-    function acceptDestroy() {
-      Inertia.visit("/category-delete", {
-        method: "delete",
-        data: {
-          id: action.id,
-        },
-        onSuccess: () => {
-          action.id = 0;
-        },
-      });
-    }
-
-    function closeDeleteModal() {
-      modal.delete = !modal.delete;
-    }
-
-    const checkbox = useForm({
-      all: false,
-      categories: [],
-    });
-
-    function bulkDestroy() {
-      modal.bulkDelete = !modal.bulkDelete;
-    }
-
-    function acceptBulkDestroy() {
-      Inertia.visit("/category-bulk-delete", {
-        method: "delete",
-        data: {
-          categoriesId: checkbox.categories,
-        },
-      });
-    }
-
-    function closeBulkDeleteModal() {
-      modal.bulkDelete = !modal.bulkDelete;
-    }
-
-    return {
-      form,
-      submit,
-      validation,
-      params,
-      sort,
-      action,
-      edit,
-      destroy,
-      modal,
-      closeDeleteModal,
-      closeEdit,
-      checkbox,
-      acceptDestroy,
-      bulkDestroy,
-      acceptBulkDestroy,
-      closeBulkDeleteModal,
-    };
-  },
-  watch: {
-    params: {
-      handler() {
-        let params = this.params;
-        // let params = pickBy(this.params);
-
-        Object.keys(params).forEach((key) => {
-          if (params[key] == "") {
-            delete params[key];
+            if (error.brand_name) {
+              validation.brand_name = error.brand_name[0];
+            } else {
+              validation.brand_name = null;
+            }
           }
         });
+    }
 
-        this.$inertia.get(this.route("category"), params, {
-          replace: true,
-          preserveState: true,
-        });
-      },
-      deep: true,
-    },
+    onMounted(() => {
+      dataTable();
+    });
+
+    return {
+      params,
+      action,
+      data,
+      form,
+      validation,
+      disable,
+      message,
+      path,
+      tableHead,
+      loader,
+      dataTable,
+      submit,
+      edit,
+      resetForm,
+    };
   },
 };
 </script>
+
+<style>
+</style>

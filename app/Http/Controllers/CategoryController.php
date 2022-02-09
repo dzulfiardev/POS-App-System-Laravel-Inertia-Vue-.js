@@ -6,14 +6,16 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Validator;
+use Inertia\Inertia;
 
 class CategoryController extends Controller
 {
 	public function category()
 	{
 		request()->validate([
-			'direction' => ['in:asc,desc'],
-			'field' 		=> ['in:category_code,category_name']
+			'search'		=> ['nullable'],
+			'direction' => ['nullable', 'in:asc,desc'],
+			'field' 		=> ['nullable', 'in:category_code,category_name']
 		]);
 
 		$query = Category::query();
@@ -23,40 +25,70 @@ class CategoryController extends Controller
 				->orWhere('category_code', 'LIKE', '%' . request('search') . '%');
 		}
 
-		if (request()->has(['field', 'direction'])) {
-			$query->orderBy(request('field'), request('direction'));
+		if (request('field') && request('direction')) {
+			if (request()->has(['field', 'direction'])) {
+				$query->orderBy(request('field'), request('direction'));
+			}
 		}
 
-		$data = [
-			'title' => env('APP_NAME') . ' | Manage Cateogry',
+		return Inertia::render('Inventories/Category', [
+			'title' 	=> env('APP_NAME') . ' | Manage Cateogry',
 			'heading' => 'Manage Category',
-			'data' => $query->orderBy('id', 'desc')->paginate(8),
-		];
-		return inertia('Inventories/Category', $data);
+			'data' 		=> $query->orderBy('id', 'desc')->paginate(8)->withPath('category')->appends(request()->all()),
+			'filters' => request()->all(['search', 'field', 'direction']),
+		]);
+	}
+
+	public function showSingle()
+	{
+		$id = request('id');
+		return response(Category::where('id', $id)->first());
 	}
 
 	public function create(Request $request)
 	{
+		if ($request->action == 'edit') {
+			$validationRules = 'required';
+			$alertMessage = 'Success Update Data';
+		} else {
+			$validationRules = 'required|unique:categories';
+			$alertMessage = 'Success Add New Data';
+		}
+
 		Validator::make($request->all(), [
-			'category_code' => 'required|unique:categories',
-			'category_name' => 'required|unique:categories',
+			'category_code' => $validationRules,
+			'category_name' => $validationRules,
 		], [
-			'required' => ':attribute is required',
-			'unique'	=> ':attribute cannot be same an others'
+			'required'	=> ':attribute is required',
+			'unique'		=> ':attribute cannot be same an others'
 		])->validate();
 
-		$store = [
-			'category_code' => $request->category_code,
-			'category_name' => $request->category_name,
-		];
+		Category::updateOrCreate(
+			['id' => request('id')],
+			[
+				'category_code' => request('category_code'),
+				'category_name' => request('category_name'),
+			]
+		);
 
-		Category::create($store);
+		return Redirect::route('category')->with('message', $alertMessage);
+	}
 
-		return Redirect::route('category');
+	public function destroy()
+	{
+		Category::destroy(request('id'));
+		return Redirect::route('category')->with('message', 'Success Delete Data');
+	}
+
+	public function bulkDestroy()
+	{
+		Category::destroy(request('categoriesId')); //array
+
+		return Redirect::route('category')->with('message', 'Success Delete ' . count(request('categoriesId')) . ' data');
 	}
 
 	public function testing()
 	{
-		return Category::orderByDesc('id')->paginate(8);
+		return response(Category::where('id', 10)->first());
 	}
 }

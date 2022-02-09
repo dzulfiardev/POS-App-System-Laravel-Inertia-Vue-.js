@@ -36,8 +36,19 @@ Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/category', [CategoryController::class, 'category'])->name('category');
     Route::post('/category-create', [CategoryController::class, 'create']);
+    // with axios
+    Route::post('/category-edit', [CategoryController::class, 'showSingle']);
+    Route::delete('/category-delete', [CategoryController::class, 'destroy']);
+    Route::delete('/category-bulk-delete', [CategoryController::class, 'bulkDestroy']);
 
     Route::get('/brand', [BrandController::class, 'brand'])->name('brand');
+    Route::post('/brand', [BrandController::class, 'create']);
+    Route::get('/brand-all', [BrandController::class, 'showAll']);
+    Route::get('/brand/{id}', [BrandController::class, 'show']);
+    Route::delete('/brand', [BrandController::class, 'destroy']);
+    Route::delete('/brand-bulk-delete', [BrandController::class, 'bulkDestroy']);
+    Route::get('/filter', [BrandController::class, 'filter']);
+
     Route::get('/inventories', [InventoriesController::class, 'inventories'])->name('inventories');
 
     Route::get('/testing', [CategoryController::class, 'testing']);
